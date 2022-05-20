@@ -1,0 +1,19 @@
+# CONDA ENVIRONMENT FILE
+name: main
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+  - anaconda
+dependencies:
+  - ensembl-vep
+  - bwa
+  - cutadapt
+  - fastqc
+  - multiqc
+  - picard
+  - gatk4=4.1.0.0
+  - samtools
+  - sambamba
+  - bcftools
+  - bedtools

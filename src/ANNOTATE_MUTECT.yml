@@ -1,0 +1,14 @@
+# CONDA ENVIRONMENT FILE
+name: main
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+  - anaconda
+dependencies:
+  - ensembl-vep
+  - bcftools
+  - pandas
+  - numpy
+  - argparse
+  - pyvcf
