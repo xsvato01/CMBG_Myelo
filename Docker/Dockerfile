@@ -1,5 +1,7 @@
 FROM ubuntu:hirsute
 
+RUN apt update -y && apt upgrade -y && apt install build-essential libssh-dev git -y
+
 # Install miniconda
 ENV CONDA_DIR /opt/conda
 RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh && \
