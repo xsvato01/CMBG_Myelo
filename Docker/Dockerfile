@@ -1,6 +1,14 @@
 FROM ubuntu:hirsute
 
-RUN apt update -y && apt upgrade -y && apt install build-essential libssh-dev git -y
+ENV INSTALL_DIR="/opt"
+
+RUN apt-get update; export DEBIAN_FRONTEND=noninteractive; apt-get -y install \
+   wget \
+   unzip \
+   build-essential \
+   gcc-multilib \
+   netcat-openbsd && \
+   export DEBIAN_FRONTEND=noninteractive; apt-get -y install openssh-client openssh-sftp-server openssh-server
 
 # Install miniconda
 ENV CONDA_DIR /opt/conda
