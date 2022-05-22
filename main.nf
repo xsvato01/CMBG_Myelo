@@ -194,7 +194,7 @@ process COVERAGE {
 	"""	
 }
 
-rawfastq = channel.fromFilePairs("5396*_R{1,2}.fastq.gz", checkIfExists: true)
+rawfastq = channel.fromFilePairs("${params.datain}/*.fastq.gz", checkIfExists: true)
 
 workflow {
 	trimmed		= TRIMMING(rawfastq)

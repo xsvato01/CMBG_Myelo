@@ -2,7 +2,7 @@ FROM ubuntu:hirsute
 
 ENV INSTALL_DIR="/opt"
 
-RUN apt-get update; export DEBIAN_FRONTEND=noninteractive; apt-get -y install \
+RUN apt-get update; export DEBIAN_FRONTEND=noninteractive; apt-get -y --no-install-recommends install \
    wget \
    unzip \
    build-essential \
