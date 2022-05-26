@@ -195,11 +195,10 @@ process COVERAGE {
 }
 
 
- rawfastq = channel.fromFilePairs("${params.datain}/*.fastq.gz", checkIfExists: true)
  
 workflow flow1 {
-take: rawfastq
-main:
+ rawfastq = channel.fromFilePairs("${params.datain}/*.fastq.gz", checkIfExists: true)
+	
 	trimmed		= TRIMMING(rawfastq)
 	sortedbam	= FIRST_ALIGN_BAM(trimmed)
 	qc_files	= FIRST_QC(sortedbam[0])
