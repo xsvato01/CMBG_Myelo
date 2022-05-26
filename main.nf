@@ -196,8 +196,9 @@ process COVERAGE {
 
 
  
-workflow flow1 {
+workflow {
  rawfastq = channel.fromFilePairs("${params.datain}/*R{1,2}*", checkIfExists: true)
+ rawfastq.view()
 	
 	trimmed		= TRIMMING(rawfastq)
 	sortedbam	= FIRST_ALIGN_BAM(trimmed)
