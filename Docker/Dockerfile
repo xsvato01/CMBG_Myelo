@@ -17,12 +17,12 @@ RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86
 
 # Put conda in path so we can use conda activate
 ENV PATH=$CONDA_DIR/bin:$PATH
-RUN export LC_ALL=C.UTF-8
 # Install the conda environment
 COPY environment.yml /
 RUN conda env create -f /environment.yml && conda clean --all -f -y
 
 # Add conda installation dir to PATH (instead of doing 'conda activate')
 ENV PATH /opt/conda/envs/mareckova_CXCR_k8s/bin:$PATH
+RUN export LC_ALL=C.UTF-8
 
 USER 1000
