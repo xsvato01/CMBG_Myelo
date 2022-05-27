@@ -21,3 +21,6 @@ dependencies:
   - numpy
   - argparse
   - pyvcf
+  - r-base
+  - r-data.table
+  - r-r.utils

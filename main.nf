@@ -2,7 +2,7 @@ nextflow.enable.dsl = 2
 
 process TRIMMING {
 	tag "trimming on $name using $task.cpus CPUs and $task.memory memory"
-	publishDir  "${params.outdir}/trimmed/", mode:'copy'
+	publishDir  "${launchDir}/trimmed/", mode:'copy'
 	
 	input:
 	tuple val(name), path(reads)
@@ -18,13 +18,13 @@ process TRIMMING {
 
 process FIRST_ALIGN_BAM {
 	tag "first align on $name using $task.cpus CPUs and $task.memory memory"
-	publishDir "${params.outdir}/mapped/", mode:'copy'
+	publishDir "${launchDir}/mapped/", mode:'copy'
 	
 	input:
 	tuple val(name), path(reads)
 
 	output:
-        tuple val(name), path("${name}.sorted.bam")
+    tuple val(name), path("${name}.sorted.bam")
 	tuple val(name), path("${name}.sorted.bai")
 
 	script:
@@ -38,7 +38,7 @@ process FIRST_ALIGN_BAM {
 
 process FIRST_QC {
 	tag "first QC on $name using $task.cpus CPUs and $task.memory memory"
-	publishDir "${params.outdir}/first_bam_qc/", mode:'copy'
+	publishDir "${launchDir}/first_bam_qc/", mode:'copy'
 	
 	input:
 	tuple val(name), path(bam)
@@ -50,15 +50,15 @@ process FIRST_QC {
 	"""
 	samtools flagstat $bam > ${name}.flagstat
 	samtools stats $bam > ${name}.samstats
-        picard BedToIntervalList I=${params.covbed} O=${name}.interval_list SD=${params.ref}.dict
+    picard BedToIntervalList I=${params.covbed} O=${name}.interval_list SD=${params.ref}.dict
 	picard CollectHsMetrics I=$bam BAIT_INTERVALS=${name}.interval_list TARGET_INTERVALS=${name}.interval_list R=${params.ref}.fa O=${name}.aln_metrics
 	"""
 }
 
 process MARK_DUPLICATES {
 	tag "Mark duplicates on $name using $task.cpus CPUs and $task.memory memory"
-	publishDir "${params.outdir}/first_bam_qc/", pattern: '*.txt', mode:'copy'
-	publishDir "${params.outdir}/mapped/", pattern: '*.md.ba*', mode:'copy'
+	publishDir "${launchDir}/first_bam_qc/", pattern: '*.txt', mode:'copy'
+	publishDir "${launchDir}/mapped/", pattern: '*.md.ba*', mode:'copy'
 	
 	input:
 	tuple val(name), path(bam)
@@ -77,7 +77,7 @@ process MARK_DUPLICATES {
 
 process MULTIQC {
 	tag "MultiQC on $name using $task.cpus CPUs and $task.memory memory"
-	publishDir "${params.outdir}/multiqc_reports/", mode:'copy'
+	publishDir "${launchDir}/multiqc_reports/", mode:'copy'
 	
 	input:
 	path '*'
@@ -93,7 +93,7 @@ process MULTIQC {
 
 process MUTECT2 {
 	tag "MUTECT2 on $name using $task.cpus CPUs and $task.memory memory"
-	publishDir "${params.outdir}/variants/", mode:'copy'
+	publishDir "${launchDir}/variants/", mode:'copy'
 	
 	input:
 	tuple val(name), path(bam)
@@ -110,7 +110,7 @@ process MUTECT2 {
 
 process FILTER_MUTECT {
 	tag "filter mutect on $name using $task.cpus CPUs and $task.memory memory"
-	publishDir "${params.outdir}/variants/", mode:'copy'
+	publishDir "${launchDir}/variants/", mode:'copy'
 	
 	input:
 	tuple val(name), path(vcf_input)
@@ -127,7 +127,7 @@ process FILTER_MUTECT {
 
 process NORMALIZE_MUTECT {
 	tag "normalize filtered mutect on $name using $task.cpus CPUs $task.memory"
-	publishDir "${params.outdir}/variants/", mode:'copy'
+	publishDir "${launchDir}/variants/", mode:'copy'
 	
 	input:
 	tuple val(name), path(vcf_input)
@@ -143,7 +143,7 @@ process NORMALIZE_MUTECT {
 
 process ANNOTATE_MUTECT {
 	tag "annotate mutect on $name using $task.cpus CPUs $task.memory"
-	publishDir "${params.outdir}/variants/", mode:'copy'
+	publishDir "${launchDir}/variants/", mode:'copy'
 	
 	input:
 	tuple val(name), path(vcf_input)
@@ -164,7 +164,7 @@ process ANNOTATE_MUTECT {
 
 process CREATE_FULL_TABLE {
 	tag "creating full table on $name using $task.cpus CPUs $task.memory"
-	publishDir "${params.outdir}/variants/", mode:'copy'
+	publishDir "${launchDir}/variants/", mode:'copy'
 	
 	input:
 	tuple val(name), path(vcf_input)
@@ -180,7 +180,7 @@ process CREATE_FULL_TABLE {
 
 process COVERAGE {
 	tag "calculating coverage on $name using $task.cpus CPUs $task.memory"
-	publishDir "${params.outdir}/coverage/", mode:'copy'
+	publishDir "${launchDir}/coverage/", mode:'copy'
 	
 	input:
 	tuple val(name), path(bam)
@@ -195,6 +195,23 @@ process COVERAGE {
 }
 
 
+process COVERAGE_R {
+	tag "R coverage on $name using $task.cpus CPUs $task.memory"
+	publishDir "${launchDir}/coverage/", mode:'copy'
+	
+	input:
+	tuple val(name), path(pbcov)
+	
+	output:
+	path '*'
+
+	script:
+	"""
+	Rscript --vanilla $params.coverstat $pbcov >> CXCR4.txt
+	"""
+}
+
+
  
 workflow {
  rawfastq = channel.fromFilePairs("${params.datain}/*R{1,2}*", checkIfExists: true)
@@ -205,14 +222,13 @@ workflow {
 	qc_files	= FIRST_QC(sortedbam[0])
 	qcdup_file	= MARK_DUPLICATES(sortedbam[0])
 	MULTIQC(qc_files.mix(qcdup_file[0]).collect())
-
 //qc_files.mix(qcdup_file[0]).collect().view()
 //qcdup_file[1].view()
-
-	raw_vcf		= MUTECT2(qcdup_file[1]) //markdup.bam 
-	filtered	= FILTER_MUTECT(raw_vcf)
-	normalized	= NORMALIZE_MUTECT(filtered)
-	annotated	= ANNOTATE_MUTECT(normalized)
-	CREATE_FULL_TABLE(normalized[0])
-	COVERAGE(sortedbam[0])
+	raw_vcf         = MUTECT2(qcdup_file[1]) //markdup.bam 
+    filtered        = FILTER_MUTECT(raw_vcf)
+    normalized      = NORMALIZE_MUTECT(filtered)
+    annotated       = ANNOTATE_MUTECT(normalized)
+    CREATE_FULL_TABLE(normalized[0])
+    pbcov           = COVERAGE(sortedbam[0])
+    COVERAGE_R(pbcov)
 }
