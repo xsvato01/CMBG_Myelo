@@ -24,5 +24,6 @@ RUN conda env create -f /environment.yml && conda clean --all -f -y
 
 # Add conda installation dir to PATH (instead of doing 'conda activate')
 ENV PATH /opt/conda/envs/mareckova_CXCR_k8s/bin:$PATH
-
+RUN locale-gen en_US.UTF-8
+ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en' LC_ALL='en_US.UTF-8'
 USER 1000
