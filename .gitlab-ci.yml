@@ -23,8 +23,9 @@ docker-build:
   script:
     - |
       if [[ "$CI_COMMIT_BRANCH" == "$CI_DEFAULT_BRANCH" ]]; then
-        tag=":$CI_COMMIT_REF_SLUG"
-        echo "Running on default branch '$CI_DEFAULT_BRANCH': tag = $tag"
+        tag=":$CI_PIPELINE_IID"
+        echo "Running on default branch '$CI_DEFAULT_BRANCH': tag = ':$CI_PIPELINE_IID'"
+
       else
         tag=":$CI_COMMIT_REF_SLUG"
         echo "Running on branch '$CI_COMMIT_BRANCH': tag = $tag"
