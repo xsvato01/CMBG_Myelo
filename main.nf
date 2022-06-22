@@ -87,6 +87,8 @@ process MULTIQC {
 
 	script:
 	"""
+    export LC_ALL=C.UTF-8
+    export LANG=C.UTF-8
 	multiqc . -n first_report.html
 	"""
 }
@@ -200,7 +202,7 @@ process COVERAGE_R {
 	publishDir "${launchDir}/coverage/", mode:'copy'
 	
 	input:
-	tuple val(name), path(pbcov)
+	path 'pbcov'
 	
 	output:
 	path '*'
