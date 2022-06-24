@@ -1,4 +1,5 @@
 nextflow.enable.dsl = 2
+launchDir = "${launchDir}/${params.datain.replaceAll(".*/","")}"
 
 process TRIMMING {
 	tag "trimming on $name using $task.cpus CPUs and $task.memory memory"
@@ -24,7 +25,7 @@ process FIRST_ALIGN_BAM {
 	tuple val(name), path(reads)
 
 	output:
-    tuple val(name), path("${name}.sorted.bam")
+        tuple val(name), path("${name}.sorted.bam")
 	tuple val(name), path("${name}.sorted.bai")
 
 	script:
@@ -50,7 +51,7 @@ process FIRST_QC {
 	"""
 	samtools flagstat $bam > ${name}.flagstat
 	samtools stats $bam > ${name}.samstats
-    picard BedToIntervalList I=${params.covbed} O=${name}.interval_list SD=${params.ref}.dict
+        picard BedToIntervalList I=${params.covbed} O=${name}.interval_list SD=${params.ref}.dict
 	picard CollectHsMetrics I=$bam BAIT_INTERVALS=${name}.interval_list TARGET_INTERVALS=${name}.interval_list R=${params.ref}.fa O=${name}.aln_metrics
 	"""
 }
@@ -188,7 +189,7 @@ process COVERAGE {
 	tuple val(name), path(bam)
 	
 	output:
-	path '*'
+	tuple val(name), path('*.PBcov.txt')
 
 	script:
 	"""
@@ -202,14 +203,14 @@ process COVERAGE_R {
 	publishDir "${launchDir}/coverage/", mode:'copy'
 	
 	input:
-	path 'pbcov'
+	tuple val(name), path(pbcov)
 	
 	output:
 	path '*'
 
 	script:
 	"""
-	Rscript --vanilla $params.coverstat $pbcov >> CXCR4.txt
+	Rscript --vanilla $params.coverstat $pbcov >> ${name}_CXCR4.txt
 	"""
 }
 
@@ -217,7 +218,6 @@ process COVERAGE_R {
  
 workflow {
  rawfastq = channel.fromFilePairs("${params.datain}/*R{1,2}*", checkIfExists: true)
- rawfastq.view()
 	
 	trimmed		= TRIMMING(rawfastq)
 	sortedbam	= FIRST_ALIGN_BAM(trimmed)
@@ -232,5 +232,6 @@ workflow {
     annotated       = ANNOTATE_MUTECT(normalized)
     CREATE_FULL_TABLE(normalized[0])
     pbcov           = COVERAGE(sortedbam[0])
-    COVERAGE_R(pbcov)
+pbcov.view()   
+ COVERAGE_R(pbcov)
 }
