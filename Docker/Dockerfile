@@ -1,4 +1,4 @@
-FROM ubuntu:hirsute
+FROM ubuntu:22.04
 
 ENV INSTALL_DIR="/opt"
 
