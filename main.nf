@@ -140,7 +140,7 @@ process NORMALIZE_MUTECT {
 
 	script:
 	"""
-	bcftools norm -f ${params.ref}.fa $vcf_input -o ${name}.mutect.filt.norm.vcf
+	bcftools norm -m-both $vcf_input > ${name}.mutect.filt.norm.vcf
 	"""
 }
 
@@ -160,7 +160,7 @@ process ANNOTATE_MUTECT {
 	--fasta ${params.ref}.fa --merged --offline --vcf --everything -o ${name}.mutect2.filt.norm.vep.vcf
 
 	bcftools view -f 'PASS,clustered_events' ${name}.mutect2.filt.norm.vep.vcf \
-	| python $params.vcftbl simple --build GRCh38 -i /dev/stdin -o ${name}.mutect2.filt.norm.vep.csv
+	| python $params.vcftbl simple --build GRCh38 -i /dev/stdin -t ${name} -o ${name}.mutect2.filt.norm.vep.csv
 
 	"""	
 }
@@ -230,8 +230,10 @@ workflow {
     filtered        = FILTER_MUTECT(raw_vcf)
     normalized      = NORMALIZE_MUTECT(filtered)
     annotated       = ANNOTATE_MUTECT(normalized)
-    CREATE_FULL_TABLE(normalized[0])
-    pbcov           = COVERAGE(sortedbam[0])
+    //CREATE_FULL_TABLE(normalized[0])
+    CREATE_FULL_TABLE(annotated)
+
+	pbcov           = COVERAGE(sortedbam[0])
 pbcov.view()   
  COVERAGE_R(pbcov)
 }
