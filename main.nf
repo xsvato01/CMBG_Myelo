@@ -88,8 +88,8 @@ process MULTIQC {
 
 	script:
 	"""
-    export LC_ALL=C.UTF-8
-    export LANG=C.UTF-8
+	export LC_ALL=C.UTF-8
+	export LANG=C.UTF-8
 	multiqc . -n first_report.html
 	"""
 }
@@ -160,7 +160,7 @@ process ANNOTATE_MUTECT {
 	--fasta ${params.ref}.fa --merged --offline --vcf --everything -o ${name}.mutect2.filt.norm.vep.vcf
 
 	bcftools view -f 'PASS,clustered_events' ${name}.mutect2.filt.norm.vep.vcf \
-	| python $params.vcftbl simple --build GRCh38 -i /dev/stdin -t ${name} -o ${name}.mutect2.filt.norm.vep.csv
+	| python $params.vcftbl simple --build GRCh38 -i /dev/stdin -t ${name} > ${name}.mutect2.filt.norm.vep.csv
 
 	"""	
 }
@@ -177,7 +177,7 @@ process CREATE_FULL_TABLE {
 
 	script:
 	"""
-	python $params.vcftbl simple --build GRCh38 -i $vcf_input -o ${name}.mutect2.filt.norm.vep.full.csv
+	python $params.vcftbl simple --build GRCh38 -i $vcf_input -t ${name} > ${name}.mutect2.filt.norm.vep.full.csv
 	"""	
 }
 
@@ -231,7 +231,7 @@ workflow {
     normalized      = NORMALIZE_MUTECT(filtered)
     annotated       = ANNOTATE_MUTECT(normalized)
     //CREATE_FULL_TABLE(normalized[0])
-    CREATE_FULL_TABLE(annotated)
+    CREATE_FULL_TABLE(annotated[0])
 
 	pbcov           = COVERAGE(sortedbam[0])
 pbcov.view()   
