@@ -1,9 +1,10 @@
-nextflow.enable.dsl = 2
-launchDir = "${launchDir}/${params.datain.replaceAll(".*/","")}"
+run = "${params.datain}".split("/")
+run = run[run.size()-2]
+launchDir = "${launchDir}/${run}"
 
 process TRIMMING {
 	tag "trimming on $name using $task.cpus CPUs and $task.memory memory"
-	publishDir  "${launchDir}/trimmed/", mode:'copy'
+	//publishDir  "${launchDir}/trimmed/", mode:'copy'
 	
 	input:
 	tuple val(name), path(reads)
@@ -19,7 +20,7 @@ process TRIMMING {
 
 process FIRST_ALIGN_BAM {
 	tag "first align on $name using $task.cpus CPUs and $task.memory memory"
-	publishDir "${launchDir}/mapped/", mode:'copy'
+	//publishDir "${launchDir}/mapped/", mode:'copy'
 	
 	input:
 	tuple val(name), path(reads)
@@ -39,7 +40,7 @@ process FIRST_ALIGN_BAM {
 
 process FIRST_QC {
 	tag "first QC on $name using $task.cpus CPUs and $task.memory memory"
-	publishDir "${launchDir}/first_bam_qc/", mode:'copy'
+	//publishDir "${launchDir}/first_bam_qc/", mode:'copy'
 	
 	input:
 	tuple val(name), path(bam)
@@ -58,8 +59,8 @@ process FIRST_QC {
 
 process MARK_DUPLICATES {
 	tag "Mark duplicates on $name using $task.cpus CPUs and $task.memory memory"
-	publishDir "${launchDir}/first_bam_qc/", pattern: '*.txt', mode:'copy'
-	publishDir "${launchDir}/mapped/", pattern: '*.md.ba*', mode:'copy'
+	//publishDir "${launchDir}/first_bam_qc/", pattern: '*.txt', mode:'copy'
+	//publishDir "${launchDir}/mapped/", pattern: '*.md.ba*', mode:'copy'
 	
 	input:
 	tuple val(name), path(bam)
@@ -96,7 +97,7 @@ process MULTIQC {
 
 process MUTECT2 {
 	tag "MUTECT2 on $name using $task.cpus CPUs and $task.memory memory"
-	publishDir "${launchDir}/variants/", mode:'copy'
+	//publishDir "${launchDir}/variants/", mode:'copy'
 	
 	input:
 	tuple val(name), path(bam)
@@ -113,7 +114,7 @@ process MUTECT2 {
 
 process FILTER_MUTECT {
 	tag "filter mutect on $name using $task.cpus CPUs and $task.memory memory"
-	publishDir "${launchDir}/variants/", mode:'copy'
+	//publishDir "${launchDir}/variants/", mode:'copy'
 	
 	input:
 	tuple val(name), path(vcf_input)
@@ -130,7 +131,7 @@ process FILTER_MUTECT {
 
 process NORMALIZE_MUTECT {
 	tag "normalize filtered mutect on $name using $task.cpus CPUs $task.memory"
-	publishDir "${launchDir}/variants/", mode:'copy'
+	//publishDir "${launchDir}/variants/", mode:'copy'
 	
 	input:
 	tuple val(name), path(vcf_input)
@@ -146,7 +147,7 @@ process NORMALIZE_MUTECT {
 
 process ANNOTATE_MUTECT {
 	tag "annotate mutect on $name using $task.cpus CPUs $task.memory"
-	publishDir "${launchDir}/variants/", mode:'copy'
+	publishDir "${launchDir}/variants/", mode:'copy', pattern: '*.csv'
 	
 	input:
 	tuple val(name), path(vcf_input)
@@ -154,6 +155,7 @@ process ANNOTATE_MUTECT {
 	output:
 	tuple val(name), path('*.vcf')
 	path '*.csv'
+
 	script:
 	"""
 	vep -i $vcf_input --cache --cache_version 90 --dir_cache $params.vep \
@@ -210,7 +212,7 @@ process COVERAGE_R {
 
 	script:
 	"""
-	Rscript --vanilla $params.coverstat $pbcov >> ${name}_CXCR4.txt
+	Rscript --vanilla $params.coverstat $pbcov >> ${name}.perexon_stat.txt
 	"""
 }
 
@@ -234,6 +236,6 @@ workflow {
     CREATE_FULL_TABLE(annotated[0])
 
 	pbcov           = COVERAGE(sortedbam[0])
-pbcov.view()   
+//pbcov.view()   
  COVERAGE_R(pbcov)
 }
