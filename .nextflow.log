@@ -1,0 +1,12 @@
+Oct-19 11:33:46.514 [main] DEBUG nextflow.cli.Launcher - $> nextflow kuberun xsvato01/CMBG_Myelo -pod-image 'cerit.io/nextflow/nextflow:22.06.1'
+Oct-19 11:33:46.648 [main] DEBUG nextflow.scm.RepositoryProvider - Request [credentials -:-] -> https://api.github.com/repos/xsvato01/CMBG_Myelo/contents/nextflow.config
+Oct-19 11:33:47.192 [main] DEBUG nextflow.config.ConfigBuilder - Found config local: /mnt/home/450402/000000-My_Documents/CMBG_Myelo/nextflow.config
+Oct-19 11:33:47.195 [main] DEBUG nextflow.config.ConfigBuilder - User config file: https://github.com/xsvato01/CMBG_Myelo/nextflow.config
+Oct-19 11:33:47.195 [main] DEBUG nextflow.config.ConfigBuilder - Parsing config file: /mnt/home/450402/000000-My_Documents/CMBG_Myelo/nextflow.config
+Oct-19 11:33:47.195 [main] DEBUG nextflow.config.ConfigBuilder - Parsing config file: https://github.com/xsvato01/CMBG_Myelo/nextflow.config
+Oct-19 11:33:47.210 [main] DEBUG nextflow.config.ConfigBuilder - Applying config profile: `standard`
+Oct-19 11:33:47.736 [main] DEBUG nextflow.config.ConfigBuilder - Applying config profile: `standard`
+Oct-19 11:33:47.786 [main] DEBUG nextflow.k8s.client.ConfigDiscovery - K8s config file does not exist: /home/user/.kube/config
+Oct-19 11:33:47.792 [main] DEBUG nextflow.k8s.K8sConfig - Kubernetes workDir=/workspace/user/work; projectDir=/workspace/projects; volumeClaims=[pvc-janek-storage-elixir1-cerit-sc-cz]
+Oct-19 11:33:47.842 [main] DEBUG nextflow.k8s.K8sDriverLauncher - Created K8s configMap with name: nf-config-2fd0d855
+Oct-19 11:33:50.980 [main] DEBUG nextflow.k8s.K8sDriverLauncher - Wait for pod termination name=condescending-minsky
