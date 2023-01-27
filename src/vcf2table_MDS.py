@@ -145,7 +145,8 @@ consequence_order = \
         "feature_elongation":33,
         "regulatory_region_variant":34,
         "feature_truncation":35,
-        "intergenic_variant":36 }
+        "intergenic_variant":36,
+        "splice_polypyrimidine_tract_variant":37 }
 
 def source_value(source):
     ret = 3

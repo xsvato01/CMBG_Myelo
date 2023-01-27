@@ -1,5 +1,5 @@
 run = "${params.datain}".split("/")
-run = run[run.size()-2]
+run = run[run.size()-1]
 launchDir = "${launchDir}/${run}"
 
 process TRIMMING {
@@ -20,13 +20,13 @@ process TRIMMING {
 
 process FIRST_ALIGN_BAM {
 	tag "first align on $name using $task.cpus CPUs and $task.memory memory"
-	//publishDir "${launchDir}/mapped/", mode:'copy'
+	publishDir "${launchDir}/mapped/", mode:'copy'
 	
 	input:
 	tuple val(name), path(reads)
 
 	output:
-        tuple val(name), path("${name}.sorted.bam")
+ tuple val(name), path("${name}.sorted.bam")
 	tuple val(name), path("${name}.sorted.bai")
 
 	script:
@@ -41,6 +41,8 @@ process FIRST_ALIGN_BAM {
 process FIRST_QC {
 	tag "first QC on $name using $task.cpus CPUs and $task.memory memory"
 	//publishDir "${launchDir}/first_bam_qc/", mode:'copy'
+
+	container 'registry.gitlab.ics.muni.cz:443/450402/btk_k8s:16'	
 	
 	input:
 	tuple val(name), path(bam)
@@ -52,7 +54,9 @@ process FIRST_QC {
 	"""
 	samtools flagstat $bam > ${name}.flagstat
 	samtools stats $bam > ${name}.samstats
-        picard BedToIntervalList I=${params.covbed} O=${name}.interval_list SD=${params.ref}.dict
+	cat ${params.covbed} | awk 'BEGIN{OFS="\t"} {print \$1,\$4,\$5,\$2}' > covbed.bed
+ # picard BedToIntervalList I=${params.covbed} O=${name}.interval_list SD=${params.ref}.dict
+	picard BedToIntervalList I=covbed.bed O=${name}.interval_list SD=${params.ref}.dict
 	picard CollectHsMetrics I=$bam BAIT_INTERVALS=${name}.interval_list TARGET_INTERVALS=${name}.interval_list R=${params.ref}.fa O=${name}.aln_metrics
 	"""
 }
@@ -104,10 +108,13 @@ process MUTECT2 {
 	
 	output:
 	tuple val(name), path ('*.vcf')
+		path '*'
 
 	script:
 	"""
-	gatk Mutect2 --reference ${params.ref}.fa --input ${bam} --annotation StrandArtifact --min-base-quality-score 30 --intervals $params.varbed  --output ${name}.mutect.vcf
+		gatk Mutect2 --reference ${params.ref}.fa --input ${bam} --annotation StrandArtifact --min-base-quality-score 10 --intervals $params.varvedExt -bamout ${name}.bamout.bam --output ${name}.mutect.vcf
+
+	#gatk Mutect2 --reference ${params.ref}.fa --input ${bam} --annotation StrandArtifact --min-base-quality-score 10 --output ${name}.mutect.vcf -bamout ${name}.bamout.bam
 	"""
 
 }
@@ -147,22 +154,23 @@ process NORMALIZE_MUTECT {
 
 process ANNOTATE_MUTECT {
 	tag "annotate mutect on $name using $task.cpus CPUs $task.memory"
-	publishDir "${launchDir}/variants/", mode:'copy', pattern: '*.csv'
+	publishDir "${launchDir}/variants/", mode:'copy'
 	
 	input:
 	tuple val(name), path(vcf_input)
 	
 	output:
 	tuple val(name), path('*.vcf')
-	path '*.csv'
+	//path '*.csv'
 
 	script:
 	"""
-	vep -i $vcf_input --cache --cache_version 90 --dir_cache $params.vep \
+	vep -i $vcf_input --cache --cache_version 95 --dir_cache $params.vep \
 	--fasta ${params.ref}.fa --merged --offline --vcf --everything -o ${name}.mutect2.filt.norm.vep.vcf
-
-	bcftools view -f 'PASS,clustered_events' ${name}.mutect2.filt.norm.vep.vcf \
-	| python $params.vcftbl simple --build GRCh38 -i /dev/stdin -t ${name} > ${name}.mutect2.filt.norm.vep.csv
+# -f 'PASS,clustered_events'
+#	bcftools view  ${name}.mutect2.filt.norm.vep.vcf \
+	# python $params.vcftbl simple --build GRCh37 -i /dev/stdin -t ${name} > ${name}.mutect2.filt.norm.vep.csv
+#	python $params.vcftbl simple --build GRCh37 -i ${name}.mutect2.filt.norm.vep.vcf -t ${name} > ${name}.mutect2.filt.norm.vep.csv
 
 	"""	
 }
@@ -179,7 +187,9 @@ process CREATE_FULL_TABLE {
 
 	script:
 	"""
-	python $params.vcftbl simple --build GRCh38 -i $vcf_input -t ${name} > ${name}.mutect2.filt.norm.vep.full.csv
+	#python $params.vcftbl simple --build GRCh37 -i $vcf_input -t ${name} > ${name}.mutect2.filt.norm.vep.full.csv
+		python $params.vcftbl simple --build GRCh37 -i $vcf_input -o ${name}.mutect2.filt.norm.vep.full.csv
+
 	"""	
 }
 
@@ -206,34 +216,33 @@ process COVERAGE_R {
 	
 	input:
 	tuple val(name), path(pbcov)
-	
-	output:
-	path '*'
 
 	script:
 	"""
-	Rscript --vanilla $params.coverstat $pbcov >> ${name}.perexon_stat.txt
+	Rscript --vanilla $params.coverstat $pbcov ${launchDir}/coverage/${name}.perexon_stat.txt
 	"""
 }
 
 
  
 workflow {
- rawfastq = channel.fromFilePairs("${params.datain}/raw_fastq/*R{1,2}*", checkIfExists: true)
+ rawfastq = channel.fromFilePairs("${params.datain}/raw_fastq/CLL*R{1,2}*", checkIfExists: true)
 	
 	trimmed		= TRIMMING(rawfastq)
 	sortedbam	= FIRST_ALIGN_BAM(trimmed)
 	qc_files	= FIRST_QC(sortedbam[0])
 	qcdup_file	= MARK_DUPLICATES(sortedbam[0])
-	MULTIQC(qc_files.mix(qcdup_file[0]).collect())
+	//MULTIQC(qc_files.mix(qcdup_file[0]).collect())
 //qc_files.mix(qcdup_file[0]).collect().view()
 //qcdup_file[1].view()
+MULTIQC(qc_files)
 	raw_vcf         = MUTECT2(qcdup_file[1]) //markdup.bam 
-    filtered        = FILTER_MUTECT(raw_vcf)
+		//raw_vcf         = MUTECT2(sortedbam[0])
+    filtered        = FILTER_MUTECT(raw_vcf[0])
     normalized      = NORMALIZE_MUTECT(filtered)
     annotated       = ANNOTATE_MUTECT(normalized)
     //CREATE_FULL_TABLE(normalized[0])
-    CREATE_FULL_TABLE(annotated[0])
+    CREATE_FULL_TABLE(annotated)
 
 	pbcov           = COVERAGE(sortedbam[0])
 //pbcov.view()   
