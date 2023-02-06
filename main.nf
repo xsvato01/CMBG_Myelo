@@ -1,6 +1,6 @@
 run = "${params.datain}".split("/")
 run = run[run.size()-1]
-launchDir = "${launchDir}/${run}"
+launchDir = "${params.outDir}/${run}"
 
 process TRIMMING {
 	tag "trimming on $name using $task.cpus CPUs and $task.memory memory"
