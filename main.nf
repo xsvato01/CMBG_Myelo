@@ -54,9 +54,9 @@ process FIRST_QC {
 	"""
 	samtools flagstat $bam > ${name}.flagstat
 	samtools stats $bam > ${name}.samstats
-	cat ${params.covbed} | awk 'BEGIN{OFS="\t"} {print \$1,\$4,\$5,\$2}' > covbed.bed
+	#cat ${params.covbed} | awk 'BEGIN{OFS="\t"} {print \$1,\$4,\$5,\$2}' > covbed.bed
  # picard BedToIntervalList I=${params.covbed} O=${name}.interval_list SD=${params.ref}.dict
-	picard BedToIntervalList I=covbed.bed O=${name}.interval_list SD=${params.ref}.dict
+	picard BedToIntervalList I=${params.covbed} O=${name}.interval_list SD=${params.ref}.dict
 	picard CollectHsMetrics I=$bam BAIT_INTERVALS=${name}.interval_list TARGET_INTERVALS=${name}.interval_list R=${params.ref}.fa O=${name}.aln_metrics
 	"""
 }
@@ -112,7 +112,7 @@ process MUTECT2 {
 
 	script:
 	"""
-		gatk Mutect2 --reference ${params.ref}.fa --input ${bam} --annotation StrandArtifact --min-base-quality-score 10 --intervals $params.varvedExt -bamout ${name}.bamout.bam --output ${name}.mutect.vcf
+		gatk Mutect2 --reference ${params.ref}.fa --input ${bam} --annotation StrandArtifact --min-base-quality-score 10 --intervals $params.varbedExt -bamout ${name}.bamout.bam --output ${name}.mutect.vcf
 
 	#gatk Mutect2 --reference ${params.ref}.fa --input ${bam} --annotation StrandArtifact --min-base-quality-score 10 --output ${name}.mutect.vcf -bamout ${name}.bamout.bam
 	"""
