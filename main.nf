@@ -112,7 +112,7 @@ process MUTECT2 {
 
 	script:
 	"""
-		gatk Mutect2 --reference ${params.ref}.fa --input ${bam} --annotation StrandArtifact --min-base-quality-score 10 --intervals $params.varbedExt -bamout ${name}.bamout.bam --output ${name}.mutect.vcf
+		gatk Mutect2 --reference ${params.ref}.fa --input ${bam} --annotation StrandArtifact --min-base-quality-score 10 --intervals $params.covbed -bamout ${name}.bamout.bam --output ${name}.mutect.vcf
 
 	#gatk Mutect2 --reference ${params.ref}.fa --input ${bam} --annotation StrandArtifact --min-base-quality-score 10 --output ${name}.mutect.vcf -bamout ${name}.bamout.bam
 	"""
@@ -226,25 +226,19 @@ process COVERAGE_R {
 
  
 workflow {
- rawfastq = channel.fromFilePairs("${params.datain}/raw_fastq/CLL*R{1,2}*", checkIfExists: true)
+ rawfastq = channel.fromFilePairs("${params.datain}/raw_fastq/${params.prefix}*R{1,2}*", checkIfExists: true)
 	
 	trimmed		= TRIMMING(rawfastq)
 	sortedbam	= FIRST_ALIGN_BAM(trimmed)
 	qc_files	= FIRST_QC(sortedbam[0])
 	qcdup_file	= MARK_DUPLICATES(sortedbam[0])
-	//MULTIQC(qc_files.mix(qcdup_file[0]).collect())
-//qc_files.mix(qcdup_file[0]).collect().view()
-//qcdup_file[1].view()
-MULTIQC(qc_files)
-	raw_vcf         = MUTECT2(qcdup_file[1]) //markdup.bam 
-		//raw_vcf         = MUTECT2(sortedbam[0])
-    filtered        = FILTER_MUTECT(raw_vcf[0])
-    normalized      = NORMALIZE_MUTECT(filtered)
-    annotated       = ANNOTATE_MUTECT(normalized)
-    //CREATE_FULL_TABLE(normalized[0])
-    CREATE_FULL_TABLE(annotated)
 
-	pbcov           = COVERAGE(sortedbam[0])
-//pbcov.view()   
+MULTIQC(qc_files)
+raw_vcf         = MUTECT2(qcdup_file[1]) //markdup.bam 
+filtered        = FILTER_MUTECT(raw_vcf[0])
+normalized      = NORMALIZE_MUTECT(filtered)
+annotated       = ANNOTATE_MUTECT(normalized)
+CREATE_FULL_TABLE(annotated)
+	pbcov = COVERAGE(sortedbam[0])
  COVERAGE_R(pbcov)
 }
