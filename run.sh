@@ -1,1 +1,1 @@
-nextflow kuberun xsvato01/mareckova_CXCR_k8s -r main -head-image 'cerit.io/nextflow/nextflow:22.11.1' -resume --datain /mnt/shared/MedGen/sequencing_results/primary_data/230825_TP53_20230825 --prefix AM
+nextflow kuberun xsvato01/mareckova_CXCR_k8s -r main -head-image 'cerit.io/nextflow/nextflow:22.11.1' -resume -process.echo --datain /mnt/shared/MedGen/sequencing_results/primary_data/230825_TP53_20230825 --prefix AM
