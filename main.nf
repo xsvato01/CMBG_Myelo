@@ -189,7 +189,7 @@ process CREATE_FULL_TABLE {
 	script:
 	"""
 	#python $params.vcftbl simple --build GRCh37 -i $vcf_input -t ${name} > ${name}.mutect2.filt.norm.vep.full.csv
-		python $params.vcftbl simple --build GRCh37 -i $vcf_input -o ${name}.mutect2.filt.norm.vep.full.csv
+		python $params.vcftbl simple --build GRCh38 -i $vcf_input -o ${name}.mutect2.filt.norm.vep.full.csv
 
 	"""	
 }
