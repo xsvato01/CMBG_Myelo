@@ -167,7 +167,7 @@ process ANNOTATE_MUTECT {
 	script:
 	"""
 	vep -i $vcf_input --cache --cache_version 95 --dir_cache $params.vep \
-	--fasta ${params.ref}.fa --merged --offline --vcf --everything -o ${name}.mutect2.filt.norm.vep.vcf
+	--fasta ${params.ref}.fa --merged --mane --canonical --offline --vcf --everything -o ${name}.mutect2.filt.norm.vep.vcf
 # -f 'PASS,clustered_events'
 #	bcftools view  ${name}.mutect2.filt.norm.vep.vcf \
 	# python $params.vcftbl simple --build GRCh37 -i /dev/stdin -t ${name} > ${name}.mutect2.filt.norm.vep.csv
@@ -189,7 +189,7 @@ process CREATE_FULL_TABLE {
 	script:
 	"""
 	#python $params.vcftbl simple --build GRCh37 -i $vcf_input -t ${name} > ${name}.mutect2.filt.norm.vep.full.csv
-		python $params.vcftbl simple --build GRCh38 -i $vcf_input -o ${name}.mutect2.filt.norm.vep.full.csv
+		python $params.vcftbl simple --build GRCh38 -i $vcf_input -t ${name} -o ${name}.mutect2.filt.norm.vep.full.csv
 
 	"""	
 }
@@ -227,7 +227,7 @@ process COVERAGE_R {
 
  
 workflow {
- rawfastq = channel.fromFilePairs("${params.datain}/raw_fastq/${params.prefix}*R{1,2}*", checkIfExists: true)
+ rawfastq = channel.fromFilePairs("${params.datain}/raw_fastq/*${params.prefix}*R{1,2}*", checkIfExists: true)
 	
 	trimmed		= TRIMMING(rawfastq)
 	sortedbam	= FIRST_ALIGN_BAM(trimmed)

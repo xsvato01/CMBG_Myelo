@@ -12,7 +12,7 @@
 import sys, getopt, re
 import pandas as pd
 import numpy as np
-import pysam
+# import pysam
 import argparse
 import vcf
 
@@ -230,11 +230,11 @@ if args.mode == 'simple':
 
 if args.mode == 'reGenotype':
 
-    t1_samfile = pysam.Samfile(args.t1_bam, "rb")
-    t1_sample_id = t1_samfile.header.get("RG")[0]["SM"]
+    # t1_samfile = pysam.Samfile(args.t1_bam, "rb")
+    # t1_sample_id = t1_samfile.header.get("RG")[0]["SM"]
 
-    t2_samfile = pysam.Samfile(args.t2_bam, "rb")
-    t2_sample_id = t2_samfile.header.get("RG")[0]["SM"]
+    # t2_samfile = pysam.Samfile(args.t2_bam, "rb")
+    # t2_sample_id = t2_samfile.header.get("RG")[0]["SM"]
 
     eprint("t1 Sample id:{} ".format(t1_sample_id))
     eprint("t2 Sample id:{} ".format(t2_sample_id))
