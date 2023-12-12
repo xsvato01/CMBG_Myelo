@@ -6,6 +6,8 @@ launchDir = "${params.outDirectory}/${run}"
 process TRIMMING {
 	tag "trimming on $name using $task.cpus CPUs and $task.memory memory"
 	//publishDir  "${launchDir}/trimmed/", mode:'copy'
+		label "small_process"
+
 	
 	input:
 	tuple val(name), path(reads)
@@ -22,7 +24,8 @@ process TRIMMING {
 process FIRST_ALIGN_BAM {
 	tag "first align on $name using $task.cpus CPUs and $task.memory memory"
 	publishDir "${launchDir}/mapped/", mode:'copy'
-	
+	label "medium_cpu"
+
 	input:
 	tuple val(name), path(reads)
 
@@ -42,7 +45,7 @@ process FIRST_ALIGN_BAM {
 process FIRST_QC {
 	tag "first QC on $name using $task.cpus CPUs and $task.memory memory"
 	//publishDir "${launchDir}/first_bam_qc/", mode:'copy'
-
+	label "smallest_process"
 	container 'registry.gitlab.ics.muni.cz:443/450402/btk_k8s:16'	
 	
 	input:
@@ -66,7 +69,8 @@ process MARK_DUPLICATES {
 	tag "Mark duplicates on $name using $task.cpus CPUs and $task.memory memory"
 	//publishDir "${launchDir}/first_bam_qc/", pattern: '*.txt', mode:'copy'
 	//publishDir "${launchDir}/mapped/", pattern: '*.md.ba*', mode:'copy'
-	
+	label "small_process"
+
 	input:
 	tuple val(name), path(bam)
 
@@ -85,7 +89,8 @@ process MARK_DUPLICATES {
 process MULTIQC {
 	tag "MultiQC on $name using $task.cpus CPUs and $task.memory memory"
 	publishDir "${launchDir}/multiqc_reports/", mode:'copy'
-	
+	label "smallest_process"
+
 	input:
 	path '*'
 
@@ -123,7 +128,8 @@ process MUTECT2 {
 process FILTER_MUTECT {
 	tag "filter mutect on $name using $task.cpus CPUs and $task.memory memory"
 	//publishDir "${launchDir}/variants/", mode:'copy'
-	
+	label "smallest_process"
+
 	input:
 	tuple val(name), path(vcf_input)
 	
@@ -139,8 +145,9 @@ process FILTER_MUTECT {
 
 process NORMALIZE_MUTECT {
 	tag "normalize filtered mutect on $name using $task.cpus CPUs $task.memory"
-	//publishDir "${launchDir}/variants/", mode:'copy'
-	
+	 // publishDir "${launchDir}/variants/", mode:'copy'
+	label "smallest_process"
+
 	input:
 	tuple val(name), path(vcf_input)
 	
@@ -155,8 +162,10 @@ process NORMALIZE_MUTECT {
 
 process ANNOTATE_MUTECT {
 	tag "annotate mutect on $name using $task.cpus CPUs $task.memory"
-	publishDir "${launchDir}/variants/", mode:'copy'
-	
+	// publishDir "${launchDir}/variants/", mode:'copy'
+ container "ensemblorg/ensembl-vep:release_108.0"
+	label "smallest_process"
+
 	input:
 	tuple val(name), path(vcf_input)
 	
@@ -166,8 +175,10 @@ process ANNOTATE_MUTECT {
 
 	script:
 	"""
-	vep -i $vcf_input --cache --cache_version 95 --dir_cache $params.vep \
-	--fasta ${params.ref}.fa --merged --mane --canonical --offline --vcf --everything -o ${name}.mutect2.filt.norm.vep.vcf
+	vep -i $vcf_input --cache --cache_version 108 --dir_cache $params.vep \
+	--fasta ${params.ref}.fa --merged --mane_select --offline --vcf --everything -o ${name}.mutect2.filt.norm.vep.vcf
+
+
 # -f 'PASS,clustered_events'
 #	bcftools view  ${name}.mutect2.filt.norm.vep.vcf \
 	# python $params.vcftbl simple --build GRCh37 -i /dev/stdin -t ${name} > ${name}.mutect2.filt.norm.vep.csv
@@ -179,7 +190,8 @@ process ANNOTATE_MUTECT {
 process CREATE_FULL_TABLE {
 	tag "creating full table on $name using $task.cpus CPUs $task.memory"
 	publishDir "${launchDir}/variants/", mode:'copy'
-	
+	label "smallest_process"
+
 	input:
 	tuple val(name), path(vcf_input)
 	
@@ -197,7 +209,8 @@ process CREATE_FULL_TABLE {
 process COVERAGE {
 	tag "calculating coverage on $name using $task.cpus CPUs $task.memory"
 	publishDir "${launchDir}/coverage/", mode:'copy'
-	
+	label "medium_mem"
+
 	input:
 	tuple val(name), path(bam)
 	
@@ -214,7 +227,8 @@ process COVERAGE {
 process COVERAGE_R {
 	tag "R coverage on $name using $task.cpus CPUs $task.memory"
 	publishDir "${launchDir}/coverage/", mode:'copy'
-	
+	label "smallest_process"
+
 	input:
 	tuple val(name), path(pbcov)
 
@@ -225,9 +239,24 @@ process COVERAGE_R {
 }
 
 
+
+process DELLY_CNVs {
+//	container "joseespinosa/docker-r-ggplot2:latest"
+	 // container "google/deepvariant:1.6.0"
+		container "kishwars/pepper_deepvariant:r0.8"
+
+	input:
+tuple val(name), path(pbcov)
+
+	
+	script:
+	"""
+	sleep infinity
+	"""
+}
  
 workflow {
- rawfastq = channel.fromFilePairs("${params.datain}/raw_fastq/*${params.prefix}*R{1,2}*", checkIfExists: true)
+ rawfastq = channel.fromFilePairs("${params.datain}/raw_fastq/${params.prefix}*R{1,2}*", checkIfExists: true)
 	
 	trimmed		= TRIMMING(rawfastq)
 	sortedbam	= FIRST_ALIGN_BAM(trimmed)
@@ -242,4 +271,6 @@ annotated       = ANNOTATE_MUTECT(normalized)
 CREATE_FULL_TABLE(annotated)
 	pbcov = COVERAGE(sortedbam[0])
  COVERAGE_R(pbcov)
+
+	//DELLY_CNVs(pbcov)
 }
