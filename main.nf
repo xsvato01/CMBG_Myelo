@@ -224,14 +224,15 @@ process ALTER_FULL_TABLE {
 	label "smallest_process"
 
 	input:
-	tuple val(name), path(vcf), path(joinedTsv)
+	tuple val(name), path(vcf), path(joinedTsv), val(ntotal)
 	
 	output:
 	tuple val(name), path("${name}.final.csv")
 
 	script:
 	"""
-	python ${params.mergetables} --table $vcf --varlist $joinedTsv --outname ${name}.final.csv
+	echo alter full table on $name
+	python ${params.mergetables} --table $vcf --varlist $joinedTsv --n $ntotal --outname ${name}.final.csv
 	"""	
 }
 
@@ -291,7 +292,7 @@ workflow {
  sortedbam	= FIRST_ALIGN_BAM(trimmed)
  qc_files	= FIRST_QC(sortedbam[0])
  qcdup_file	= MARK_DUPLICATES(sortedbam[0])
- MULTIQC(qc_files)
+ MULTIQC(qc_files.collect())
  raw_vcf         = MUTECT2(qcdup_file[1]) //markdup.bam 
  filtered        = FILTER_MUTECT(raw_vcf[0])
  normalized      = NORMALIZE_MUTECT(filtered)
@@ -308,7 +309,8 @@ workflow {
 	})//.view{"____________Combined_filtered____________: $it"}
 
  joined_vars = JOIN_VARS(Combined_filtered)
- ALTER_FULL_TABLE(full_table.join(joined_vars))
+	joined_total = joined_vars.combine(joined_vars.count())
+ ALTER_FULL_TABLE(full_table.join(joined_total))
 
  pbcov = COVERAGE(sortedbam[0])
  COVERAGE_R(pbcov)

@@ -2,15 +2,23 @@ import pandas as pd
 import argparse
 
 
-def main(varlist, input_table, outname):
+def main(varlist: str, input_table: str, outname: str, total_samples: int):
     samples_vars = pd.read_csv(
         varlist, names=["chr", "pos", "ref", "alt", "sample"], sep='\t')
-    agg_dict = {'chr': 'first', 'pos': 'first',
-                'ref': 'first', 'alt': 'first', 'sample': ', '.join, }
+    agg_dict = {
+        'chr': 'first',
+        'pos': 'first',
+        'ref': 'first',
+        'alt': 'first',
+        'sample': 'count',
+    }
     grouped_vars = samples_vars.groupby(
         by=["chr", "pos", "ref", "alt"], as_index=False).agg(agg_dict)
-    table = pd.read_csv(input_table)
+    grouped_vars.rename(columns={'sample': 'occurence'}, inplace=True)
+    # grouped_vars['occurence'] = grouped_vars['sample_count'].astype(int)
+    grouped_vars['occurence_ratio'] = grouped_vars['occurence'] / total_samples
 
+    table = pd.read_csv(input_table)
     merged_df = pd.merge(grouped_vars, table,
                          right_on=['Chromosome', 'Start_Position',
                                    'Reference_Allele', 'Tumor_Seq_Allele2'],
@@ -28,6 +36,11 @@ if __name__ == "__main__":
     parser.add_argument(
         '--table', help='Input path for .csv parsed vcf file to concat sample names', required=True)
     parser.add_argument(
+        '--n', help='Total number of samples', required=True)
+    parser.add_argument(
         '--outname', help='Output name', required=True)
     args = parser.parse_args()
-    main(args.varlist, args.table, args.outname)
+    main(args.varlist, args.table, args.outname, int(args.n))
+    # main('/Volumes/lamb/home/450402/000000-My_Documents/MARECKOVA_BTK/launch/231208_TP53_20231208/joined/CLL-5745.joinedvariants.tsv',
+    #      '/Volumes/lamb/home/450402/000000-My_Documents/MARECKOVA_BTK/launch/231208_TP53_20231208/joined/CLL-5745.mutect2.filt.norm.vep.full.csv',
+    #      'test', int('13'))
