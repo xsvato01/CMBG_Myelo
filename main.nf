@@ -1,11 +1,12 @@
 run = "${params.datain}".split("/")
 run = run[run.size()-1]
-launchDir = "${params.outDirectory}/${run}"
-
+//launchDir = "${params.outDirectory}/${run}"
+launchDir = "${params.outDirectory}/${params.runname}"
 
 process COLLECT_BASECALLED {
 	tag "COLLECT_BASECALLED on $name using $task.cpus CPUs and $task.memory memory"
 	label "small_process"
+	debug true
 
 	input:
 	val "name"
@@ -16,7 +17,10 @@ process COLLECT_BASECALLED {
 	script:
 	"""
  echo $name
-	cp ${params.datain}/raw_fastq/${name}*R{1,2}* ./
+	echo ${params.runname}
+	## this might cause an error if there are several basecalled folders:
+	cp  /mnt/shared/MedGen/sequencing_results/primary_data/*${params.runname}/raw_fastq/${name}*R{1,2}* ./
+	ls -al
 	"""
 } 
 
@@ -267,27 +271,11 @@ process COVERAGE_R {
 	Rscript --vanilla $params.coverstat $pbcov ${launchDir}/coverage/${name}.perexon_stat.txt
 	"""
 }
-
-
-
-process DELLY_CNVs {
-//	container "joseespinosa/docker-r-ggplot2:latest"
-	 // container "google/deepvariant:1.6.0"
-		container "kishwars/pepper_deepvariant:r0.8"
-
-	input:
-tuple val(name), path(pbcov)
-
-	
-	script:
-	"""
-	sleep infinity
-	"""
-}
  
 workflow {
-	runlist = channel.fromPath(params.samplesheet).splitCsv()
- rawfastq = COLLECT_BASECALLED(runlist) 
+	runlist = channel.fromPath(params.samplesheet).splitCsv().flatten().view{"runlist: $it"}
+ rawfastq = COLLECT_BASECALLED(runlist).view{"rawfastq: $it"}
+
  trimmed		= TRIMMING(rawfastq)
  sortedbam	= FIRST_ALIGN_BAM(trimmed)
  qc_files	= FIRST_QC(sortedbam[0])
@@ -309,7 +297,7 @@ workflow {
 	})//.view{"____________Combined_filtered____________: $it"}
 
  joined_vars = JOIN_VARS(Combined_filtered)
-	joined_total = joined_vars.combine(joined_vars.count())
+	joined_total = joined_vars.combine(joined_vars.count()-1)
  ALTER_FULL_TABLE(full_table.join(joined_total))
 
  pbcov = COVERAGE(sortedbam[0])
