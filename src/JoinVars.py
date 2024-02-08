@@ -4,7 +4,11 @@ import argparse
 
 def main(varlist: str, input_table: str, outname: str, total_samples: int):
     samples_vars = pd.read_csv(
-        varlist, names=["chr", "pos", "ref", "alt", "sample"], sep='\t')
+        varlist, names=["chr", "pos", "ref", "alt", "sample"], sep='\t', dtype={"chr": str,
+                                                                                "pos": int,
+                                                                                "ref": str,
+                                                                                "alt": str,
+                                                                                "sample": str})
     agg_dict = {
         'chr': 'first',
         'pos': 'first',
@@ -18,7 +22,8 @@ def main(varlist: str, input_table: str, outname: str, total_samples: int):
     # grouped_vars['occurence'] = grouped_vars['sample_count'].astype(int)
     grouped_vars['occurence_ratio'] = grouped_vars['occurence'] / total_samples
 
-    table = pd.read_csv(input_table)
+    # if no sex chromosome present in table, chr casts to int64
+    table = pd.read_csv(input_table, dtype={'Chromosome': object})
     merged_df = pd.merge(grouped_vars, table,
                          right_on=['Chromosome', 'Start_Position',
                                    'Reference_Allele', 'Tumor_Seq_Allele2'],
@@ -41,6 +46,6 @@ if __name__ == "__main__":
         '--outname', help='Output name', required=True)
     args = parser.parse_args()
     main(args.varlist, args.table, args.outname, int(args.n))
-    # main('/Volumes/lamb/home/450402/000000-My_Documents/MARECKOVA_BTK/launch/231208_TP53_20231208/joined/CLL-5745.joinedvariants.tsv',
-    #      '/Volumes/lamb/home/450402/000000-My_Documents/MARECKOVA_BTK/launch/231208_TP53_20231208/joined/CLL-5745.mutect2.filt.norm.vep.full.csv',
+    # main('/Volumes/lamb/home/450402/000000-My_Documents/MARECKOVA_BTK/launch/TP53_20240126/joined/CXCR4_1_F.joinedvariants.tsv',
+    #      '/Volumes/lamb/home/450402/000000-My_Documents/MARECKOVA_BTK/launch/TP53_20240126/create_full_table/CXCR4_1_F.mutect2.filt.norm.vep.full.csv',
     #      'test', int('13'))
