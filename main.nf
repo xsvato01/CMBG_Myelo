@@ -127,7 +127,6 @@ process MUTECT2 {
 	"""
 	gatk Mutect2 --reference ${params.ref}.fa --input ${bam} --annotation StrandArtifact --min-base-quality-score 10 --intervals $params.covbed -bamout ${sample.name}.bamout.bam --output ${sample.name}.mutect.vcf
 	"""
-
 }
 
 process FILTER_MUTECT {
@@ -199,6 +198,23 @@ process JOIN_VARS {
 	"""	
 }
 
+process JOIN_VARS_ALL {
+	tag "JOIN_VARS_ALL  using $task.cpus CPUs $task.memory"
+	publishDir "${params.outDirectory}/joined/", mode:'copy'
+	label "smallest_process"
+
+	input:
+	 path "VcfsToMerge"
+	
+	output:
+	 path "joinedAllVariants.tsv"
+
+	script:
+	"""
+ for vcf_file in $VcfsToMerge; do bcftools query -f '%CHROM\\t%POS\\t%REF\\t%ALT[\\t%SAMPLE]\\n' "\$vcf_file" >> joinedAllVariants.tsv; done
+	"""	
+}
+
 process CREATE_FULL_TABLE {
 	tag "creating full table on $sample.name using $task.cpus CPUs $task.memory"
 		publishDir "${params.outDirectory}/${sample.run}/create_full_table/", mode:'copy'
@@ -224,7 +240,7 @@ process ALTER_FULL_TABLE {
 	label "smallest_process"
 
 	input:
-	tuple val(sample), path(vcf), path(joinedTsv), val(ntotal)
+	tuple val(sample), path(variantsTableCsv), path(joinedTsv), val(ntotal)
 	
 	output:
 	tuple val(sample), path("${sample.name}.final.csv")
@@ -232,7 +248,7 @@ process ALTER_FULL_TABLE {
 	script:
 	"""
 	echo alter full table on $sample.name
-	python ${params.mergetables} --table $vcf --varlist $joinedTsv --n $ntotal --outname ${sample.name}.final.csv
+	python ${params.mergetables} --table $variantsTableCsv --varlist $joinedTsv --n $ntotal --outname ${sample.name}.final.csv
 	"""	
 }
 
@@ -269,7 +285,6 @@ process COVERAGE_R {
 }
  
 workflow {
-//	runlist = channel.fromPath(params.samplesheet).splitCsv().flatten().view{"runlist: $it"}
 
 	runlist = channel.fromList(params.samples)
  rawfastq = COLLECT_BASECALLED(runlist)
@@ -285,6 +300,7 @@ workflow {
  annotated       = ANNOTATE_MUTECT(normalized)
  full_table = CREATE_FULL_TABLE(annotated)
 	Vcf_paths = normalized.map({it -> [it[1]]})
+	Vcf_paths_collected = Vcf_paths.collect()
 	Combined_collected_vcf = normalized.combine(Vcf_paths.collect().map({it -> [it]}))
  Combined_filtered = Combined_collected_vcf.map({
 		row ->
@@ -292,11 +308,10 @@ workflow {
 		def vcf = row[1]
 		def filtered = removeSame(vcf, row[2])
 		[name,vcf, filtered]	
-	})//.view{"____________Combined_filtered____________: $it"}
-
- joined_vars = JOIN_VARS(Combined_filtered)
-	joined_total = joined_vars.combine(joined_vars.count()-1)
- ALTER_FULL_TABLE(full_table.join(joined_total))
+	})
+	Joined_all_vars = JOIN_VARS_ALL(Vcf_paths_collected)
+	Joined__all_total = full_table.combine(Joined_all_vars.combine(full_table.count()))
+	ALTER_FULL_TABLE(Joined__all_total)
 
  pbcov = COVERAGE(sortedbam[0])
  COVERAGE_R(pbcov)
