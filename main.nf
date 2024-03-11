@@ -1,5 +1,3 @@
-launchDir = "${params.outDirectory}/${params.runname}"
-
 process COLLECT_BASECALLED {
 	tag "COLLECT_BASECALLED on $sample.name using $task.cpus CPUs and $task.memory memory"
 	label "small_process"
@@ -43,14 +41,14 @@ process FIRST_ALIGN_BAM {
 	tuple val(sample), path(reads)
 
 	output:
- tuple val(sample), path("${sample.name}.sorted.bam")
+	tuple val(sample), path("${sample.name}.sorted.bam")
 	tuple val(sample), path("${sample.name}.sorted.bai")
 
 	script:
 	rg = "\"@RG\\tID:${sample.name}\\tSM:${sample.name}\\tLB:${sample.name}\\tPL:ILLUMINA\""
 	"""
 	bwa mem -R ${rg} -t 4 ${params.refindex} $reads \
-	| samtools view -Sb -o - -| samtools sort -o ${sample.name}.sorted.bam
+	| samtools view -Sb -o - - | samtools sort -o ${sample.name}.sorted.bam
 	samtools index ${sample.name}.sorted.bam ${sample.name}.sorted.bai	
 	"""
 }
@@ -194,7 +192,7 @@ process JOIN_VARS {
 
 	script:
 	"""
- for vcf_file in $toMerge; do bcftools query -f '%CHROM\\t%POS\\t%REF\\t%ALT[\\t%SAMPLE]\\n' "\$vcf_file" >> ${sample.name}.joinedvariants.tsv; done
+	for vcf_file in $toMerge; do bcftools query -f '%CHROM\\t%POS\\t%REF\\t%ALT[\\t%SAMPLE]\\n' "\$vcf_file" >> ${sample.name}.joinedvariants.tsv; done
 	"""	
 }
 
@@ -204,14 +202,14 @@ process JOIN_VARS_ALL {
 	label "smallest_process"
 
 	input:
-	 path "VcfsToMerge"
+	path "VcfsToMerge"
 	
 	output:
-	 path "joinedAllVariants.tsv"
+	path "joinedAllVariants.tsv"
 
 	script:
 	"""
- for vcf_file in $VcfsToMerge; do bcftools query -f '%CHROM\\t%POS\\t%REF\\t%ALT[\\t%SAMPLE]\\n' "\$vcf_file" >> joinedAllVariants.tsv; done
+	for vcf_file in $VcfsToMerge; do bcftools query -f '%CHROM\\t%POS\\t%REF\\t%ALT[\\t%SAMPLE]\\n' "\$vcf_file" >> joinedAllVariants.tsv; done
 	"""	
 }
 
@@ -283,38 +281,38 @@ process COVERAGE_R {
 	Rscript --vanilla $params.coverstat $pbcov ${params.outDirectory}/${sample.run}/coverage/${sample.name}.perexon_stat.txt
 	"""
 }
- 
+
 workflow {
 
-	runlist = channel.fromList(params.samples)
- rawfastq = COLLECT_BASECALLED(runlist)
+runlist = channel.fromList(params.samples)
+rawfastq = COLLECT_BASECALLED(runlist)
 
- trimmed		= TRIMMING(rawfastq)
- sortedbam	= FIRST_ALIGN_BAM(trimmed)
- qc_files	= FIRST_QC(sortedbam[0])
- qcdup_file	= MARK_DUPLICATES(sortedbam[0])
- MULTIQC(qc_files.collect())
- raw_vcf         = MUTECT2(qcdup_file[1]) //markdup.bam 
- filtered        = FILTER_MUTECT(raw_vcf[0])
- normalized      = NORMALIZE_MUTECT(filtered)
- annotated       = ANNOTATE_MUTECT(normalized)
- full_table = CREATE_FULL_TABLE(annotated)
-	Vcf_paths = normalized.map({it -> [it[1]]})
-	Vcf_paths_collected = Vcf_paths.collect()
-	Combined_collected_vcf = normalized.combine(Vcf_paths.collect().map({it -> [it]}))
- Combined_filtered = Combined_collected_vcf.map({
-		row ->
-		def name = row[0]
-		def vcf = row[1]
-		def filtered = removeSame(vcf, row[2])
-		[name,vcf, filtered]	
+trimmed	= TRIMMING(rawfastq)
+sortedbam	= FIRST_ALIGN_BAM(trimmed)
+qc_files	= FIRST_QC(sortedbam[0])
+qcdup_file	= MARK_DUPLICATES(sortedbam[0])
+MULTIQC(qc_files.collect())
+raw_vcf	= MUTECT2(qcdup_file[1]) //markdup.bam 
+filtered	= FILTER_MUTECT(raw_vcf[0])
+normalized	= NORMALIZE_MUTECT(filtered)
+annotated	= ANNOTATE_MUTECT(normalized)
+full_table	= CREATE_FULL_TABLE(annotated)
+Vcf_paths = normalized.map({it -> [it[1]]})
+Vcf_paths_collected = Vcf_paths.collect()
+Combined_collected_vcf = normalized.combine(Vcf_paths.collect().map({it -> [it]}))
+Combined_filtered = Combined_collected_vcf.map({
+	row ->
+	def name = row[0]
+	def vcf = row[1]
+	def filtered = removeSame(vcf, row[2])
+	[name,vcf, filtered]	
 	})
-	Joined_all_vars = JOIN_VARS_ALL(Vcf_paths_collected)
-	Joined__all_total = full_table.combine(Joined_all_vars.combine(full_table.count()))
-	ALTER_FULL_TABLE(Joined__all_total)
+Joined_all_vars = JOIN_VARS_ALL(Vcf_paths_collected)
+Joined__all_total = full_table.combine(Joined_all_vars.combine(full_table.count()))
+ALTER_FULL_TABLE(Joined__all_total)
 
- pbcov = COVERAGE(sortedbam[0])
- COVERAGE_R(pbcov)
+pbcov = COVERAGE(sortedbam[0])
+COVERAGE_R(pbcov)
 }
 
 
