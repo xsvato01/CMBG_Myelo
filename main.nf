@@ -10,7 +10,7 @@ process COLLECT_BASECALLED {
 
 	script:
 	"""
- echo COLLECT_BASECALLED $sample.name
+	echo COLLECT_BASECALLED $sample.name
 	cp  /mnt/shared/MedGen/sequencing_results/primary_data/*${sample.run}/raw_fastq/${sample.name}*R{1,2}* ./
 	"""
 } 
