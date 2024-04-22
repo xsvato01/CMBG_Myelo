@@ -1,1 +1,1 @@
-nextflow kuberun xsvato01/mareckova_CXCR_k8s -r main -head-image 'cerit.io/nextflow/nextflow:22.11.1' -resume -with-report  --datain /mnt/shared/MedGen/sequencing_results/primary_data/231208_TP53_20231208 --prefix AM --samplesheet ../samplesheet.txt --runname TP53_20240126 -params-file samplesheet.json
+nextflow kuberun xsvato01/mareckova_CXCR_k8s -r main -head-image 'cerit.io/nextflow/nextflow:22.11.1' -resume -with-report -params-file samplesheet.json -c nextflow.config

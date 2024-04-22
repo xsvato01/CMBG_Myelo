@@ -96,6 +96,8 @@ process MULTIQC {
 	tag "MultiQC using $task.cpus CPUs and $task.memory memory"
 	publishDir "${params.outDirectory}/multiqc_reports/", mode:'copy'
 	label "smallest_process"
+	container "staphb/multiqc:1.19"
+	// container 'registry.gitlab.ics.muni.cz:443/450402/tp53_nf:5'
 
 	input:
 	path '*'
